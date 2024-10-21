@@ -70,7 +70,9 @@ def valid_object_id():
 
 
 @pytest.mark.asyncio
-async def test_create_sample_paper_success(mock_mongo_repo, mock_cache, sample_paper_data, valid_object_id):
+async def test_create_sample_paper_success(
+    mock_mongo_repo, mock_cache, sample_paper_data, valid_object_id
+):
     """
     Test successful creation of a sample paper.
 
@@ -95,7 +97,9 @@ async def test_create_sample_paper_success(mock_mongo_repo, mock_cache, sample_p
 
 
 @pytest.mark.asyncio
-async def test_create_sample_paper_error(mock_mongo_repo, mock_cache, sample_paper_data):
+async def test_create_sample_paper_error(
+    mock_mongo_repo, mock_cache, sample_paper_data
+):
     """
     Test error handling during sample paper creation.
 
@@ -114,7 +118,9 @@ async def test_create_sample_paper_error(mock_mongo_repo, mock_cache, sample_pap
 
 
 @pytest.mark.asyncio
-async def test_get_sample_paper_from_cache(mock_mongo_repo, mock_cache, valid_object_id):
+async def test_get_sample_paper_from_cache(
+    mock_mongo_repo, mock_cache, valid_object_id
+):
     """
     Test retrieval of a sample paper from cache.
 
@@ -185,7 +191,9 @@ async def test_get_sample_paper_not_found(mock_mongo_repo, mock_cache, valid_obj
 
 
 @pytest.mark.asyncio
-async def test_update_sample_paper_success(mock_mongo_repo, mock_cache, valid_object_id):
+async def test_update_sample_paper_success(
+    mock_mongo_repo, mock_cache, valid_object_id
+):
     """
     Test successful update of a sample paper.
 
@@ -216,7 +224,9 @@ async def test_update_sample_paper_success(mock_mongo_repo, mock_cache, valid_ob
 
 
 @pytest.mark.asyncio
-async def test_update_sample_paper_not_found(mock_mongo_repo, mock_cache, valid_object_id):
+async def test_update_sample_paper_not_found(
+    mock_mongo_repo, mock_cache, valid_object_id
+):
     """
     Test error handling when updating a non-existent sample paper.
 
@@ -234,7 +244,9 @@ async def test_update_sample_paper_not_found(mock_mongo_repo, mock_cache, valid_
 
 
 @pytest.mark.asyncio
-async def test_delete_sample_paper_success(mock_mongo_repo, mock_cache, valid_object_id):
+async def test_delete_sample_paper_success(
+    mock_mongo_repo, mock_cache, valid_object_id
+):
     """
     Test successful deletion of a sample paper.
 
@@ -252,9 +264,7 @@ async def test_delete_sample_paper_success(mock_mongo_repo, mock_cache, valid_ob
 
     assert isinstance(response, JSONResponse)
     assert response.status_code == 200
-    assert json.loads(response.body) == {
-        "message": "Sample paper deleted successfully"
-    }
+    assert json.loads(response.body) == {"message": "Sample paper deleted successfully"}
 
     mock_mongo_repo.find_one.assert_called_once()
     mock_mongo_repo.delete_one.assert_called_once()
@@ -262,7 +272,9 @@ async def test_delete_sample_paper_success(mock_mongo_repo, mock_cache, valid_ob
 
 
 @pytest.mark.asyncio
-async def test_delete_sample_paper_not_found(mock_mongo_repo, mock_cache, valid_object_id):
+async def test_delete_sample_paper_not_found(
+    mock_mongo_repo, mock_cache, valid_object_id
+):
     """
     Test error handling when deleting a non-existent sample paper.
 
@@ -280,7 +292,9 @@ async def test_delete_sample_paper_not_found(mock_mongo_repo, mock_cache, valid_
 
 
 @pytest.mark.asyncio
-async def test_delete_sample_paper_failure(mock_mongo_repo, mock_cache, valid_object_id):
+async def test_delete_sample_paper_failure(
+    mock_mongo_repo, mock_cache, valid_object_id
+):
     """
     Test error handling when sample paper deletion fails.
 
@@ -298,4 +312,150 @@ async def test_delete_sample_paper_failure(mock_mongo_repo, mock_cache, valid_ob
         await view.delete_sample_paper(valid_object_id)
 
     assert exc_info.value.status_code == 400
-    assert exc_info.value.detail == f"Failed to delete the sample paper with ID {valid_object_id}"
+    assert (
+        exc_info.value.detail
+        == f"Failed to delete the sample paper with ID {valid_object_id}"
+    )
+
+
+@pytest.mark.asyncio
+async def test_search_sample_papers(mock_mongo_repo, mock_cache):
+    """
+    Test searching for sample papers.
+
+    This test verifies that the search_sample_papers method correctly searches
+    for sample papers based on a query string and returns the expected results.
+    """
+    view = GetSamplePaperView(mongo_repo=mock_mongo_repo, cache=mock_cache)
+
+    # Mock the search results
+    mock_search_results = [
+        {
+            "_id": ObjectId(),
+            "title": "Sample Paper Title",
+            "type": "previous_year",
+            "time": 180,
+            "marks": 100,
+            "params": {"board": "CBSE", "grade": 10, "subject": "Maths"},
+            "tags": ["algebra", "geometry"],
+            "chapters": ["Quadratic Equations", "Triangles"],
+            "sections": {
+                "marks_per_question": 5,
+                "type": "default",
+                "questions": {
+                    "question": "In a right-angled triangle, if one angle is 30°, what is the other acute angle?",
+                    "answer": "60°",
+                    "type": "short",
+                    "question_slug": "right-angle-triangle-angles",
+                    "reference_id": "GT001",
+                    "hint": "Remember that the sum of angles in a triangle is 180°",
+                    "params": {},
+                },
+            },
+            "matched_questions": [
+                {
+                    "question": "In a right-angled triangle, if one angle is 30°, what is the other acute angle?",
+                    "answer": "60°",
+                }
+            ],
+        },
+        {
+            "_id": ObjectId(),
+            "title": "Another Sample Paper",
+            "type": "previous_year",
+            "time": 180,
+            "marks": 100,
+            "params": {"board": "CBSE", "grade": 10, "subject": "Maths"},
+            "tags": ["algebra", "geometry"],
+            "chapters": ["Quadratic Equations", "Triangles"],
+            "sections": {
+                "marks_per_question": 5,
+                "type": "default",
+                "questions": {
+                    "question": "What is the Pythagorean theorem?",
+                    "answer": "In a right-angled triangle, the square of the hypotenuse is equal to the sum of squares of the other two sides.",
+                    "type": "short",
+                    "question_slug": "pythagorean-theorem",
+                    "reference_id": "GT002",
+                    "hint": "Think about the relationship between sides in a right-angled triangle",
+                    "params": {},
+                },
+            },
+            "matched_questions": [
+                {
+                    "question": "What is the Pythagorean theorem?",
+                    "answer": "In a right-angled triangle, the square of the hypotenuse is equal to the sum of squares of the other two sides.",
+                }
+            ],
+        },
+    ]
+
+    expected_response = {
+        "results": [
+            {**result, "id": str(result["_id"])} for result in mock_search_results
+        ],
+        "total_count": len(mock_search_results),
+        "limit": 10,
+        "skip": 0,
+    }
+
+    # Remove _id from expected results
+    for result in expected_response["results"]:
+        result.pop("_id")
+
+    # Set up the mock for text_search
+    mock_mongo_repo.text_search.return_value = mock_search_results
+    mock_mongo_repo.count_documents.return_value = len(mock_search_results)
+
+    # Perform the search
+    query = "triangle"
+    limit = 10
+    skip = 0
+    response = await view.search_sample_papers(query, limit, skip)
+
+    # Assert the response
+    assert isinstance(response, JSONResponse)
+    assert response.status_code == 200
+
+    content = json.loads(response.body)
+    assert content == expected_response
+
+    # Verify that the correct methods were called
+    expected_search_query = {
+        "$or": [
+            {"sections.questions.question": {"$regex": query, "$options": "i"}},
+            {"sections.questions.answer": {"$regex": query, "$options": "i"}},
+        ]
+    }
+    mock_mongo_repo.text_search.assert_called_once_with(
+        view.collection_name,
+        expected_search_query,
+        limit=limit,
+        skip=skip,
+        sort=[("_id", -1)],
+    )
+    mock_mongo_repo.count_documents.assert_called_once_with(
+        view.collection_name, expected_search_query
+    )
+
+
+@pytest.mark.asyncio
+async def test_search_sample_papers_error(mock_mongo_repo, mock_cache):
+    """
+    Test error handling in search_sample_papers method.
+
+    This test ensures that the search_sample_papers method correctly handles
+    errors and raises the appropriate HTTP exception.
+    """
+    view = GetSamplePaperView(mongo_repo=mock_mongo_repo, cache=mock_cache)
+
+    # Set up the mock to raise an exception
+    mock_mongo_repo.text_search.side_effect = Exception("Database error")
+
+    # Attempt to perform the search
+    with pytest.raises(HTTPException) as exc_info:
+        await view.search_sample_papers("query", 10, 0)
+
+    # Assert the exception details
+    assert exc_info.value.status_code == 500
+    assert exc_info.value.detail == "Internal server error"

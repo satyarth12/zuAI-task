@@ -47,6 +47,10 @@ class _ServerSettings(BaseSettings):
     # db and collection names
     MONGODB_DATABASE: str
     MONGODB_SAMPLE_PAPERS_COLLECTION: str
+    MONGODB_GENAI_TASKS_COLLECTION: str
+
+    # upload directory
+    UPLOAD_DIR: str = "uploads"
 
     class Config:
         case_sensitive = False

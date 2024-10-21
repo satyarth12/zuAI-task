@@ -88,10 +88,15 @@ python -m pytest  --cov=. tests/sample_paper_views.py
 python -m pytest  --cov=. tests/genai_process_views.py
 ```
 
-
+## Running the Server
+You can run the server using the following command:
+```
+python -m server.main
+```
 
 ## API Endpoints
-The API will be available at `http://localhost:8000`.
+After running the server, the API will be available at `http://localhost:8000`. <br>
+For detailed API documentation, visit `http://localhost:8000/docs`
 
 ### - Sample Paper Endpoints
    1. Create a Sample Paper:
@@ -124,7 +129,6 @@ The API will be available at `http://localhost:8000`.
    3. Get Task Status:
       - GET `/tasks/{task_id}`
 
-For detailed API documentation, visit `http://localhost:8000/docs` after starting the server.
 
 ## Rate Limiting
 The API implements rate limiting to prevent abuse and ensure fair usage. The rate limits are as follows:

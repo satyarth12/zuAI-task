@@ -1,7 +1,7 @@
 import json
 from abc import ABC
 from dataclasses import dataclass, field
-from typing import Dict, Any
+from typing import Any, Dict
 
 from bson import ObjectId
 from fastapi import HTTPException
@@ -69,7 +69,9 @@ class _BaseSamplePaperView(ABC):
         inserted_id = await self.mongo_repo.insert_one(self.collection_name, paper_data)
         return inserted_id
 
-    async def _update_in_db(self, paper_id: str, paper_update: Dict[str, Any]) -> Dict[str, Any]:
+    async def _update_in_db(
+        self, paper_id: str, paper_update: Dict[str, Any]
+    ) -> Dict[str, Any]:
         update_result = await self.mongo_repo.update_one(
             self.collection_name, {"_id": ObjectId(paper_id)}, paper_update
         )
@@ -87,6 +89,47 @@ class _BaseSamplePaperView(ABC):
                 status_code=400,
                 detail=f"Failed to delete the sample paper with ID {paper_id}",
             )
+
+    async def _search_papers(
+        self, search_query: Dict[str, Any], limit: int = 10, skip: int = 0
+    ) -> Dict[str, Any]:
+        """
+        Base method for searching sample papers.
+
+        Args:
+            search_query (Dict[str, Any]): The search query to be used.
+            limit (int): The maximum number of results to return.
+            skip (int): The number of results to skip (for pagination).
+
+        Returns:
+            Dict[str, Any]: A dictionary containing search results and metadata.
+
+        Raises:
+            HTTPException: If there's an error during the search process.
+        """
+        results = await self.mongo_repo.text_search(
+            self.collection_name,
+            search_query,
+            limit=limit,
+            skip=skip,
+            sort=[("_id", -1)],
+        )
+
+        formatted_results = []
+        for result in results:
+            result["id"] = str(result.pop("_id"))
+            formatted_results.append(result)
+
+        total_count = await self.mongo_repo.count_documents(
+            self.collection_name, search_query
+        )
+
+        return {
+            "results": formatted_results,
+            "total_count": total_count,
+            "limit": limit,
+            "skip": skip,
+        }
 
 
 @dataclass
@@ -136,12 +179,23 @@ class CreateSamplePaperView(_BaseSamplePaperView):
 @dataclass
 class GetSamplePaperView(_BaseSamplePaperView):
     """
-    View class for retrieving a sample paper.
+    View class for retrieving and searching sample papers.
 
-    This class handles the retrieval of a sample paper from the cache or database.
+    This class extends _BaseSamplePaperView and provides methods for fetching
+    individual sample papers and performing searches across the sample paper collection.
+
+    Attributes:
+        Inherits all attributes from _BaseSamplePaperView.
 
     Methods:
-        get_sample_paper(paper_id: str) -> JSONResponse: Retrieves a sample paper by ID.
+        get_sample_paper(paper_id: str) -> JSONResponse:
+            Retrieves a single sample paper by its ID.
+
+        search_sample_papers(query: str, limit: int = 10, skip: int = 0) -> JSONResponse:
+            Searches for sample papers based on a query string.
+
+    The class utilizes both database and cache operations to optimize performance
+    and reduce database load where possible.
     """
 
     async def get_sample_paper(self, paper_id: str) -> JSONResponse:
@@ -170,6 +224,39 @@ class GetSamplePaperView(_BaseSamplePaperView):
             raise e
         except Exception as e:
             LOGGER.error(f"Error retrieving sample paper: {str(e)}")
+            raise HTTPException(status_code=500, detail="Internal server error")
+
+    async def search_sample_papers(
+        self, query: str, limit: int = 10, skip: int = 0
+    ) -> JSONResponse:
+        """
+        Search for sample papers based on a query string.
+
+        Args:
+            query (str): The search query for both question and answer fields.
+            limit (int): The maximum number of results to return (default: 10).
+            skip (int): The number of results to skip (for pagination) (default: 0).
+
+        Returns:
+            JSONResponse: A response containing the search results.
+
+        Raises:
+            HTTPException: If there's an error during the search process.
+        """
+        try:
+            search_query = {
+                "$or": [
+                    {"sections.questions.question": {"$regex": query, "$options": "i"}},
+                    {"sections.questions.answer": {"$regex": query, "$options": "i"}},
+                ]
+            }
+
+            search_results = await self._search_papers(search_query, limit, skip)
+
+            LOGGER.info(f"Performed search with query: {query}")
+            return JSONResponse(status_code=200, content=search_results)
+        except Exception as e:
+            LOGGER.error(f"Error in search_sample_papers: {str(e)}")
             raise HTTPException(status_code=500, detail="Internal server error")
 
 

@@ -21,6 +21,38 @@ This task focuses on building a robust and efficient API for managing and proces
    poetry shell
    ```
 
+## Project Structure
+
+The project is organized into the following directories:
+
+### Server Directory
+
+The `server` directory contains the main application logic and configuration files.
+
+- `__init__.py`: Initializes the server package.
+- `api_router.py`: Contains the custom `APIRouter` class for handling API routes.
+- `main.py`: The entry point for the FastAPI application.
+- `settings.py`: Configuration settings for the server, including environment variables and logging.
+
+### Source Directory
+
+The `src` directory contains the core modules for handling sample papers and GenAI processes.
+
+- `genai_process/`: Handles the integration with Gemini AI for processing PDFs and text.
+  - `handlers.py`: Contains the `GeminiHandler` class for interacting with the Gemini API.
+  - `routes.py`: Defines the API routes for GenAI processes.
+  - `views.py`: Contains view classes for processing PDF and text inputs.
+
+- `sample_paper/`: Manages the creation, retrieval, updating, and deletion of sample papers.
+  - `routes.py`: Defines the API routes for sample paper operations.
+  - `schema.py`: Contains Pydantic models for sample paper data validation.
+  - `views.py`: Contains view classes for handling sample paper operations.
+
+- `shared_resource/`: Provides shared resources like database and cache utilities.
+  - `cache.py`: Contains the `RedisCacheRepository` class for interacting with Redis.
+  - `db.py`: Contains the `AsyncMongoRepository` class for MongoDB operations and `MongoIndexManager` for index management.
+
+
 ## Environment Setup
 
 ### Gemini Integration

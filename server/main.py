@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from server import server_settings
+from src.genai_process.routes import extraction_router
 from src.sample_paper.routes import sample_paper_router
 
 app = FastAPI()
@@ -21,6 +22,7 @@ async def root():
 
 
 app.include_router(sample_paper_router)
+app.include_router(extraction_router)
 
 if __name__ == "__main__":
     uvicorn.run(

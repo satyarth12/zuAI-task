@@ -9,10 +9,12 @@ from redis.asyncio import Redis
 from server import server_settings
 from src.genai_process.routes import extraction_router
 from src.sample_paper.routes import sample_paper_router
+from src.shared_resource.db import create_indexes
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    # Initialize Redis connection
     redis_connection = await Redis.from_url(
         f"redis://{server_settings.REDIS_HOST}:{server_settings.REDIS_PORT}",
         password=server_settings.REDIS_PASSWORD,
@@ -20,7 +22,13 @@ async def lifespan(_: FastAPI):
         decode_responses=True,
     )
     await FastAPILimiter.init(redis_connection)
+
+    # Create indexes for sample papers
+    await create_indexes()
+
     yield
+
+    # Cleanup
     await FastAPILimiter.close()
 
 

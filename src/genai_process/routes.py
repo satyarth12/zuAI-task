@@ -1,4 +1,5 @@
 from fastapi import BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
+from fastapi_limiter.depends import RateLimiter
 
 from server import APIRouter
 from src.genai_process.handlers import GeminiHandler
@@ -7,6 +8,12 @@ from src.shared_resource.cache import RedisCacheRepository, get_redis_cache
 from src.shared_resource.db import AsyncMongoRepository, get_mongo_repo
 
 extraction_router = APIRouter(tags=["extraction"])
+
+# Rate limit: 5 requests per minute for extraction endpoints
+extraction_rate_limiter = RateLimiter(times=5, seconds=60)
+
+# Rate limit: 20 requests per minute for task status endpoint
+task_status_rate_limiter = RateLimiter(times=20, seconds=60)
 
 
 async def get_pdf_genai_process_view(
@@ -25,7 +32,7 @@ async def get_text_genai_process_view(
     return TextGenAIProcessView(gemini_handler, mongo_repo, cache)
 
 
-@extraction_router.post("/extract/pdf")
+@extraction_router.post("/extract/pdf", dependencies=[Depends(extraction_rate_limiter)])
 async def extract_pdf(
     file: UploadFile = File(...),
     background_tasks: BackgroundTasks = BackgroundTasks(),
@@ -43,7 +50,9 @@ async def extract_pdf(
     return await pdf_view.process(file, background_tasks)
 
 
-@extraction_router.post("/extract/text")
+@extraction_router.post(
+    "/extract/text", dependencies=[Depends(extraction_rate_limiter)]
+)
 async def extract_text(
     text: str = Form(...),
     background_tasks: BackgroundTasks = BackgroundTasks(),
@@ -58,7 +67,9 @@ async def extract_text(
     return await text_view.process(text, background_tasks)
 
 
-@extraction_router.get("/tasks/{task_id}")
+@extraction_router.get(
+    "/tasks/{task_id}", dependencies=[Depends(task_status_rate_limiter)]
+)
 async def get_task_status(
     task_id: str,
     pdf_view: PDFGenAIProcessView = Depends(get_pdf_genai_process_view),

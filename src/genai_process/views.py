@@ -2,7 +2,7 @@ import json
 import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import Any, Dict, Literal, Union
 from uuid import uuid4
 
 import aiofiles
@@ -65,10 +65,10 @@ class BaseGenAIProcessView(ABC):
         self,
         task_id: str,
         status: str,
-        sample_paper_id: str = None,
-        error: str = None,
+        sample_paper_id: Union[str, None] = None,
+        error: Union[str, None] = None,
     ) -> None:
-        update_data = {"status": status}
+        update_data: Dict[str, Any] = {"status": status}
         if sample_paper_id:
             update_data["sample_paper_id"] = sample_paper_id
         if error:
@@ -85,19 +85,22 @@ class BaseGenAIProcessView(ABC):
         if task_data:
             return JSONResponse(
                 status_code=200,
-                content={
-                    "task_id": task_data["task_id"],
-                    "task_type": task_data["task_type"],
-                    "status": task_data["status"],
-                    "error": task_data["error"],
-                    "sample_paper_id": task_data["sample_paper_id"],
-                },
+                content=self._format_task_response(task_data),
             )
 
         return JSONResponse(
             status_code=404,
             content={"status": "not_found", "message": "Task not found"},
         )
+
+    def _format_task_response(self, task_data: Dict[str, Any]) -> Dict[str, Any]:
+        return {
+            "task_id": task_data["task_id"],
+            "task_type": task_data["task_type"],
+            "status": task_data["status"],
+            "error": task_data["error"],
+            "sample_paper_id": task_data["sample_paper_id"],
+        }
 
     async def _store_sample_paper(self, sample_paper: SamplePaper) -> str:
         create_view = CreateSamplePaperView(self.mongo_repo, self.cache)
@@ -157,8 +160,11 @@ class PDFGenAIProcessView(BaseGenAIProcessView):
             LOGGER.error(f"Error processing PDF task {task_id}: {str(e)}")
             await self._update_task_status(task_id, "error", error=str(e))
         finally:
-            if os.path.exists(file_path):
-                os.remove(file_path)
+            self._cleanup_file(file_path)
+
+    def _cleanup_file(self, file_path: str) -> None:
+        if os.path.exists(file_path):
+            os.remove(file_path)
 
 
 @dataclass

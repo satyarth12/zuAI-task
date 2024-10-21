@@ -42,7 +42,10 @@ class _BaseSamplePaperView(ABC):
     async def _set_in_cache(
         self, paper_id: str, paper_data: dict, expiration: int = 3600
     ) -> None:
-        paper_data.pop("_id")
+        # Remove '_id' if it exists, otherwise use the 'id' key
+        paper_data.pop("_id", None)
+        if "id" not in paper_data:
+            paper_data["id"] = paper_id
         await self.cache.set(
             self._get_cache_key(paper_id), json.dumps(paper_data), expiration=expiration
         )
@@ -58,8 +61,7 @@ class _BaseSamplePaperView(ABC):
             raise HTTPException(
                 status_code=404, detail=f"Sample paper with ID {paper_id} not found"
             )
-        paper_data["id"] = str(paper_data["_id"])
-        del paper_data["_id"]
+        paper_data["id"] = str(paper_data.pop("_id"))
         return paper_data
 
     async def _insert_to_db(self, paper_data: dict) -> str:
@@ -72,7 +74,8 @@ class _BaseSamplePaperView(ABC):
         )
         if update_result == 0:
             raise HTTPException(status_code=400, detail="No fields were updated")
-        return await self._get_from_db(paper_id)
+        updated_paper = await self._get_from_db(paper_id)
+        return updated_paper
 
     async def _delete_from_db(self, paper_id: str) -> None:
         delete_result = await self.mongo_repo.delete_one(
@@ -114,7 +117,6 @@ class CreateSamplePaperView(_BaseSamplePaperView):
             paper_dict = paper.model_dump()
             inserted_id = await self._insert_to_db(paper_dict)
             paper_dict["id"] = inserted_id
-
             await self._set_in_cache(inserted_id, paper_dict)
 
             LOGGER.info(f"Created sample paper with ID: {inserted_id}")

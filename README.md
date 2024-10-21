@@ -83,6 +83,7 @@ The API will be available at `http://localhost:8000`.
    1. Extract from PDF:
       - POST `/extract/pdf`
       - Body: Form data with 'file' field containing the PDF file
+      - For testing, you can use the `sample_paper.pdf` file in the `test_data` folder.
 
    2. Extract from Text:
       - POST `/extract/text`

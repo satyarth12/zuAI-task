@@ -1,6 +1,7 @@
 import json
 from abc import ABC
 from dataclasses import dataclass, field
+from typing import Dict, Any
 
 from bson import ObjectId
 from fastapi import HTTPException
@@ -35,14 +36,14 @@ class _BaseSamplePaperView(ABC):
     def _get_cache_key(self, paper_id: str) -> str:
         return f"{self.collection_name}:{paper_id}"
 
-    async def _get_from_cache(self, paper_id: str) -> dict | None:
+    async def _get_from_cache(self, paper_id: str) -> Dict[str, Any] | None:
         cached_paper = await self.cache.get(self._get_cache_key(paper_id))
         return json.loads(cached_paper) if cached_paper else None
 
     async def _set_in_cache(
-        self, paper_id: str, paper_data: dict, expiration: int = 3600
+        self, paper_id: str, paper_data: Dict[str, Any], expiration: int = 3600
     ) -> None:
-        # Remove '_id' if it exists, otherwise use the 'id' key
+        paper_data = paper_data.copy()
         paper_data.pop("_id", None)
         if "id" not in paper_data:
             paper_data["id"] = paper_id
@@ -53,7 +54,7 @@ class _BaseSamplePaperView(ABC):
     async def _delete_from_cache(self, paper_id: str) -> None:
         await self.cache.delete(self._get_cache_key(paper_id))
 
-    async def _get_from_db(self, paper_id: str) -> dict:
+    async def _get_from_db(self, paper_id: str) -> Dict[str, Any]:
         paper_data = await self.mongo_repo.find_one(
             self.collection_name, {"_id": ObjectId(paper_id)}
         )
@@ -64,11 +65,11 @@ class _BaseSamplePaperView(ABC):
         paper_data["id"] = str(paper_data.pop("_id"))
         return paper_data
 
-    async def _insert_to_db(self, paper_data: dict) -> str:
+    async def _insert_to_db(self, paper_data: Dict[str, Any]) -> str:
         inserted_id = await self.mongo_repo.insert_one(self.collection_name, paper_data)
         return inserted_id
 
-    async def _update_in_db(self, paper_id: str, paper_update: dict) -> dict:
+    async def _update_in_db(self, paper_id: str, paper_update: Dict[str, Any]) -> Dict[str, Any]:
         update_result = await self.mongo_repo.update_one(
             self.collection_name, {"_id": ObjectId(paper_id)}, paper_update
         )
@@ -184,7 +185,7 @@ class UpdateSamplePaperView(_BaseSamplePaperView):
     """
 
     async def update_sample_paper(
-        self, paper_id: str, paper_update: dict
+        self, paper_id: str, paper_update: Dict[str, Any]
     ) -> JSONResponse:
         """
         Update a sample paper.
